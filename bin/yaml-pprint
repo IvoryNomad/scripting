@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+
+import argparse
+import logging
+import sys
+from pathlib import Path
+
+#######################################
+# Permissable logging levels (similar #
+# to but not the same as syslog)      #
+#   CRITICAL    50                    #
+#   ERROR       40                    #
+#   WARNING     30                    #
+#   INFO        20                    #
+#   DEBUG       10                    #
+#######################################
+# set default logging level
+log_lvl = logging.ERROR
+# uncomment the next line for debugging
+# log_lvl=logging.INFO
+# uncomment the next line for debugging
+# log_lvl=logging.DEBUG
+
+# configure logging
+log = logging.getLogger(__file__)
+logging.basicConfig(
+    stream=sys.stderr,
+    level=log_lvl,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+)
+
+try:
+    import ruamel.yaml
+except ModuleNotFoundError:
+    log.fatal(
+        "".join(
+            [
+                "Could not load module 'ruamel.yaml'.\n",
+                "Possible fixes:\n",
+                "- install the module on the system\n",
+                "- install the module for your username\n",
+                "- install the module in a virtual environment ",
+                "(or use a venv where it is installed)\n",
+            ]
+        )
+    )
+    sys.exit(2)
+
+
+# Parse command line args
+# Keep this first so it's easier to find :-)
+def init_argparse() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        allow_abbrev=False,
+        description="Pretty Print YAML documents",
+    )
+    parser.add_argument(
+        "infile",
+        nargs="?",
+        type=argparse.FileType("r"),
+        default=sys.stdin,
+        help="Input file (default: STDIN)",
+    )
+    parser.add_argument(
+        "outfile",
+        nargs="?",
+        type=argparse.FileType("w"),
+        default=sys.stdout,
+        help="Output file (default: STDOUT)",
+    )
+    parser.add_argument(
+        "-i",
+        "--in-place",
+        action="store_true",
+        help="Replace the contents of the input file in-place (invalid when input is STDIN, or output file is specified",  # noqa E501
+    )
+    return parser
+
+
+# get command line arguments
+parser = init_argparse()
+log.debug("parsing command line arguments")
+args = parser.parse_args()
+
+# sanity check arguments
+if args.in_place and (args.infile.name == "<stdin>" or args.outfile.name != "<stdout>"):
+    log.critical(
+        "in-place editing requires an input file argument and no output file argument"  # noqa E501
+    )
+    sys.exit(1)
+
+yamlin = ruamel.yaml.YAML(typ="rt")
+yamlin.preserve_quotes = True
+
+yamlout = ruamel.yaml.YAML(typ="rt")
+yamlout.indent(mapping=2)
+yamlout.preserve_quotes = True
+data = yamlin.load(args.infile)
+
+if args.in_place:
+    args.infile.close()
+    outfile = Path(args.infile.name)
+else:
+    outfile = args.outfile
+
+yamlout.dump(data, outfile)
