@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# uncomment to debug
+# set -x
+
+show_help () {
+    cat <<EndMsg
+usage: ${0} [-h|--help] [-t] num [count]
+
+Generate random string of characters.
+
+positional arguments:
+    num     How many characters in the string
+    count   How many strings (optional)
+
+options:
+    -h      display help
+    -t      use only alphanumeric characters
+EndMsg
+    # exit since they asked for help
+    exit $1
+}
+
+if [[ "$#" == "0" ]]; then
+    show_help
+fi
+
+chars="[:graph:]"
+count=1
+opts="TRUE"
+while [[ "$1" != "" ]]; do
+    if [[ -n "${opts}" ]]; then
+        case $1 in
+          -h|--help)
+            show_help
+            ;;
+          -t)
+            chars="[:alnum:]"
+            shift
+            ;;
+          *)
+            # non option argument, done with options
+            # this means options MUST come first or they will be ignored
+            unset opts
+            ;;
+        esac
+    fi
+    if [[ -z "${num}" ]]; then
+        num=$1
+        shift
+    else
+        count=$1
+        # both num and count are defined, do the thing
+        break
+    fi
+done
+if [[ -z "${num}" ]]; then
+    printf "ERROR: argument <num> required\n" >&2
+    show_help 1
+fi
+# sanity check the args ...
+for arg in "${num}" "${count}"; do
+    if [[ ! "${arg}" =~ ^[[:digit:]]+$ ]]; then
+        printf "ERROR: argument '${arg}' invalid - must be numeric\n" >&2
+        show_help 1
+    fi
+done
+
+# do some math to make sure we get enough printable characters
+# we grab 10 times as many characters as we want to print
+head -c $((10*num*count)) /dev/urandom | tr -dc "${chars}" | fold -w "${num}" | head -n "${count}"
