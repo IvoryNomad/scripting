@@ -22,7 +22,7 @@ EndMsg
 }
 
 if [[ "$#" == "0" ]]; then
-    show_help
+    show_help 1
 fi
 
 chars="[:graph:]"
@@ -32,7 +32,7 @@ while [[ "$1" != "" ]]; do
     if [[ -n "${opts}" ]]; then
         case $1 in
           -h|--help)
-            show_help
+            show_help 0
             ;;
           -t)
             chars="[:alnum:]"
@@ -56,7 +56,7 @@ while [[ "$1" != "" ]]; do
 done
 if [[ -z "${num}" ]]; then
     printf "ERROR: argument <num> required\n" >&2
-    show_help 1
+    show_help 2
 fi
 # sanity check the args ...
 for arg in "${num}" "${count}"; do
